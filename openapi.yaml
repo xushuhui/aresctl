@@ -1,0 +1,213 @@
+openapi: 3.0.0
+info:
+    title: API Documentation
+    version: 1.0.0
+paths:
+    /users:
+        get:
+            summary: 获取用户列表
+            tags:
+                - Users
+            responses:
+                "200":
+                    description: Success
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListReply'
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                "500":
+                    description: Internal Error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+        post:
+            summary: 创建用户
+            tags:
+                - Users
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateRequest'
+            responses:
+                "200":
+                    description: Success
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateReply'
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                "500":
+                    description: Internal Error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /users/{id}:
+        get:
+            summary: 获取用户详情
+            tags:
+                - Users
+            responses:
+                "200":
+                    description: Success
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetReply'
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                "404":
+                    description: Not Found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                "500":
+                    description: Internal Error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+        put:
+            summary: 更新用户
+            tags:
+                - Users
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateRequest'
+            responses:
+                "200":
+                    description: Success
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateReply'
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                "500":
+                    description: Internal Error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+        delete:
+            summary: 删除用户
+            tags:
+                - Users
+            responses:
+                "200":
+                    description: Success
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteReply'
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                "500":
+                    description: Internal Error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+components:
+    schemas:
+        CreateUserRequest:
+            type: object
+            description: 创建用户请求
+            properties:
+                email:
+                    type: string
+                    description: 邮箱
+                name:
+                    type: string
+                    description: 用户名
+        CreateUserResponse:
+            type: object
+            description: 创建用户响应
+            properties:
+                id:
+                    type: integer
+                    description: 用户ID
+                    format: int64
+        ErrorResponse:
+            type: object
+            properties:
+                code:
+                    type: integer
+                    description: 错误码
+                message:
+                    type: string
+                    description: 错误信息
+        ListUserResponse:
+            type: object
+            description: 用户列表响应
+            properties:
+                list:
+                    type: array
+                    description: 用户列表
+                    items:
+                        $ref: '#/components/schemas/UserResponse'
+                total:
+                    type: integer
+                    description: 总数
+                    format: int64
+        MessageResponse:
+            type: object
+            description: 消息响应
+            properties:
+                message:
+                    type: string
+                    description: 消息内容
+        UpdateUserRequest:
+            type: object
+            description: 更新用户请求
+            properties:
+                email:
+                    type: string
+                    description: 邮箱
+                name:
+                    type: string
+                    description: 用户名
+        UserResponse:
+            type: object
+            description: 用户响应
+            properties:
+                email:
+                    type: string
+                    description: 邮箱
+                id:
+                    type: integer
+                    description: 用户ID
+                    format: int64
+                name:
+                    type: string
+                    description: 用户名
