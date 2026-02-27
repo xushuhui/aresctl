@@ -39,10 +39,11 @@ type Operation struct {
 }
 
 type Parameter struct {
-	Name     string `yaml:"name"`
-	In       string `yaml:"in"`
-	Required bool   `yaml:"required"`
-	Schema   Schema `yaml:"schema"`
+	Name        string `yaml:"name"`
+	In          string `yaml:"in"`
+	Required    bool   `yaml:"required"`
+	Description string `yaml:"description,omitempty"`
+	Schema      Schema `yaml:"schema"`
 }
 
 type RequestBody struct {
@@ -78,10 +79,11 @@ type SchemaObject struct {
 }
 
 type PropertyDef struct {
-	Type        string     `yaml:"type"`
+	Type        string     `yaml:"type,omitempty"`
 	Description string     `yaml:"description,omitempty"`
 	Items       *SchemaRef `yaml:"items,omitempty"`
 	Format      string     `yaml:"format,omitempty"`
+	Ref         string     `yaml:"$ref,omitempty"`
 }
 
 type Route struct {
@@ -102,7 +104,7 @@ func GenerateOpenAPI(routeDir, apiDir, outputFile string) {
 			Title:   "API Documentation",
 			Version: "1.0.0",
 		},
-		Paths:      buildPaths(routes),
+		Paths:      buildPaths(routes, schemas),
 		Components: Components{Schemas: schemas},
 	}
 
@@ -280,6 +282,9 @@ func parseSchemas(dir string) map[string]SchemaObject {
 						if strings.HasPrefix(part, "json:") {
 							jsonTag = strings.Trim(strings.TrimPrefix(part, "json:"), `"`)
 							jsonTag = strings.Split(jsonTag, ",")[0]
+						} else if strings.HasPrefix(part, "query:") {
+							jsonTag = strings.Trim(strings.TrimPrefix(part, "query:"), `"`)
+							jsonTag = strings.Split(jsonTag, ",")[0]
 						}
 					}
 				}
@@ -313,8 +318,7 @@ func parseSchemas(dir string) map[string]SchemaObject {
 								prop.Format = "int64"
 							}
 						} else {
-							prop.Type = "object"
-							prop.Items = &SchemaRef{Ref: "#/components/schemas/" + ident.Name}
+							prop.Ref = "#/components/schemas/" + ident.Name
 						}
 					}
 				case *ast.ArrayType:
@@ -379,14 +383,14 @@ func isBasicType(goType string) bool {
 	}
 }
 
-func buildPaths(routes []Route) map[string]PathItem {
+func buildPaths(routes []Route, schemas map[string]SchemaObject) map[string]PathItem {
 	paths := make(map[string]PathItem)
 
 	for _, route := range routes {
 		path := strings.ReplaceAll(route.Path, "{id}", "{id}")
 
 		item := paths[path]
-		op := buildOperation(route)
+		op := buildOperation(route, schemas)
 
 		switch route.Method {
 		case "GET":
@@ -405,7 +409,7 @@ func buildPaths(routes []Route) map[string]PathItem {
 	return paths
 }
 
-func buildOperation(route Route) *Operation {
+func buildOperation(route Route, schemas map[string]SchemaObject) *Operation {
 	op := &Operation{
 		Summary: route.Comment,
 		Responses: map[string]Response{
@@ -427,13 +431,9 @@ func buildOperation(route Route) *Operation {
 		op.Tags = []string{route.Tag}
 	}
 
-	if needsIdQueryParameter(route.Path, route.Handler) {
-		op.Parameters = []Parameter{{
-			Name:     "id",
-			In:       "query",
-			Required: true,
-			Schema:   Schema{Type: "integer"},
-		}}
+	if route.Method == "GET" {
+		queryParams := getQueryParametersForHandler(route.Handler, schemas)
+		op.Parameters = append(op.Parameters, queryParams...)
 	}
 
 	requestSchema := inferRequestSchema(route.Handler, route.Method)
@@ -465,46 +465,35 @@ func buildOperation(route Route) *Operation {
 	return op
 }
 
-func needsIdQueryParameter(path, handler string) bool {
-	needsIdPaths := []string{
-		"/help", "/expert", "/help/share", "/expert/share",
-	}
+func getQueryParametersForHandler(handler string, schemas map[string]SchemaObject) []Parameter {
+	requestStructName := handler + "Request"
 
-	needsIdHandlers := []string{
-		"GetHelp", "GetExpert", "GetHelpShare", "GetExpertShare",
-	}
+	if schema, exists := schemas[requestStructName]; exists {
+		var params []Parameter
 
-	for _, p := range needsIdPaths {
-		if path == p {
-			return true
+		for propName, propDef := range schema.Properties {
+			param := Parameter{
+				Name:     propName,
+				In:       "query",
+				Required: false,
+				Schema:   Schema{Type: propDef.Type},
+			}
+
+			if propDef.Description != "" {
+				param.Description = propDef.Description
+			}
+
+			params = append(params, param)
 		}
+
+		return params
 	}
 
-	for _, h := range needsIdHandlers {
-		if handler == h {
-			return true
-		}
-	}
-
-	return false
+	return []Parameter{}
 }
 
 func inferResponseSchema(handler, method string) string {
-	replyName := handler + "Reply"
-
-	if strings.HasPrefix(handler, "List") {
-		return replyName
-	}
-
-	if strings.HasPrefix(handler, "Get") || strings.HasPrefix(handler, "Create") {
-		return replyName
-	}
-
-	if method == "POST" || method == "PUT" || method == "DELETE" {
-		return replyName
-	}
-
-	return ""
+	return handler + "Response"
 }
 
 func inferRequestSchema(handler, method string) string {
@@ -512,18 +501,5 @@ func inferRequestSchema(handler, method string) string {
 		return ""
 	}
 
-	switch handler {
-	case "LoginPhone":
-		return "LoginPhoneRequest"
-	case "LoginMini":
-		return "LoginMiniRequest"
-	case "SendCode":
-		return "SendCodeRequest"
-	case "AuthorizePhoneMini":
-		return "AuthorizePhoneMiniRequest"
-	case "CreateHelp":
-		return "CreateHelpRequest"
-	default:
-		return handler + "Request"
-	}
+	return handler + "Request"
 }
