@@ -162,6 +162,16 @@ func runGen(config *CmdParams) error {
 
 	g.UseDB(db)
 
+	g.WithDataTypeMap(map[string]func(gorm.ColumnType) (dataType string){
+		"int": func(columnType gorm.ColumnType) (dataType string) {
+			return "int32"
+		},
+
+		// bool mapping
+		"tinyint": func(columnType gorm.ColumnType) (dataType string) {
+			return "int32"
+		},
+	})
 	models, err := genModels(g, db, config.Tables)
 	if err != nil {
 		return err
