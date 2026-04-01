@@ -104,6 +104,29 @@ This will generate an `openapi.yaml` file in your project root by analyzing:
 ✓ Generated openapi.yaml successfully
 ```
 
+### Generate GORM Code
+
+Run in your project root:
+
+```bash
+aresctl gen
+```
+
+`gen` reads `gorm.yaml` from current directory by default.
+
+Minimum `gorm.yaml` example (MySQL only):
+
+```yaml
+version: "0.1"
+database:
+  dsn: "user:pass@tcp(127.0.0.1:3306)/your_db?charset=utf8mb4&parseTime=True&loc=Local"
+  db: "mysql"
+  tables: []
+  outPath: "./dao/query"
+```
+
+If `tables` is empty, it will generate for all tables.
+
 ### View Help
 
 Get general help:
@@ -121,6 +144,7 @@ Usage:
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
+  gen         Generate GORM models and query code
   generate    Generate code from templates
   help        Help about any command
   new         Create a new Ares project
